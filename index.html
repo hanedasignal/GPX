@@ -67,10 +67,10 @@
 
 <div class="card">
   <label class="drop" id="drop" for="file">
-    <span class="big">📂 タップしてGPXを選ぶ</span>
-    <span class="small" id="fname">またはここにファイルをドロップ</span>
+    <span class="big">📂 タップして軌跡ファイルを選ぶ</span>
+    <span class="small" id="fname">GPX・TCX・KML・GeoJSON・NMEA・CSV に対応</span>
   </label>
-  <input type="file" id="file" accept=".gpx,application/gpx+xml,text/xml,application/xml,*/*">
+  <input type="file" id="file" accept="*/*">
   <button type="button" id="sample" style="width:100%;margin:8px 0 0;background:#fff;color:#1565c0;border:1px solid #1565c0">サンプルで試す</button>
   <div class="row">
     <label>地図
@@ -139,7 +139,7 @@
     <button id="play" disabled>▶ 再生</button>
     <button id="rec" class="sub" disabled>● 動画を保存</button>
   </div>
-  <div id="status">GPXファイルを選んでください</div>
+  <div id="status">軌跡ファイルを選んでください</div>
   <div id="stopsBox" style="display:none"><div id="stopsSum" style="font-weight:bold;margin-top:8px;font-size:13px"></div><div id="stopsList"></div></div>
   <div class="note">枠の中で動いている間はカメラが動きません。枠から出たときだけスクロールします。</div>
   <div id="result"></div>
@@ -189,14 +189,96 @@ let curF=0,playing=false,raf=0,busy=false,drawPending=false;
 function status(s){$('status').textContent=s;}
 
 /* ---------- GPX ---------- */
-function parseGPX(text){
+const _tms=v=>{
+  if(v==null||v==='') return NaN;
+  if(typeof v==='number'||/^\d+(\.\d+)?$/.test(String(v).trim())){const n=+v;return n>1e11?n:n*1000;}
+  return Date.parse(String(v).trim());
+};
+const _nmeaDeg=(v,h)=>{const d=Math.floor(parseFloat(v)/100),m=parseFloat(v)-d*100;const r=d+m/60;return (h==='S'||h==='W')?-r:r;};
+function _parseXML(text){
   const doc=new DOMParser().parseFromString(text,'application/xml');
-  let els=[...doc.getElementsByTagName('trkpt')];
-  if(!els.length) els=[...doc.getElementsByTagName('rtept')];
-  let list=els.map(e=>{
-    const te=e.getElementsByTagName('time')[0];
-    return {lat:parseFloat(e.getAttribute('lat')),lon:parseFloat(e.getAttribute('lon')),t:te?Date.parse(te.textContent):NaN};
-  }).filter(p=>isFinite(p.lat)&&isFinite(p.lon));
+  const q=n=>[...doc.getElementsByTagNameNS('*',n)];
+  const txt=(e,n)=>{const x=e.getElementsByTagNameNS('*',n)[0];return x?x.textContent:null;};
+  let out=[];
+  // GPX
+  let els=q('trkpt');if(!els.length) els=q('rtept');
+  if(els.length) return els.map(e=>({lat:parseFloat(e.getAttribute('lat')),lon:parseFloat(e.getAttribute('lon')),t:_tms(txt(e,'time'))}));
+  // TCX
+  els=q('Trackpoint');
+  if(els.length) return els.map(e=>({lat:parseFloat(txt(e,'LatitudeDegrees')),lon:parseFloat(txt(e,'LongitudeDegrees')),t:_tms(txt(e,'Time'))}));
+  // KML gx:Track（時刻つき）
+  const tracks=q('Track');
+  if(tracks.length){
+    for(const tr of tracks){
+      const wh=[...tr.getElementsByTagNameNS('*','when')].map(e=>_tms(e.textContent));
+      const co=[...tr.getElementsByTagNameNS('*','coord')].map(e=>e.textContent.trim().split(/\s+/).map(parseFloat));
+      co.forEach((c,i)=>out.push({lat:c[1],lon:c[0],t:wh[i]}));
+    }
+    if(out.length) return out;
+  }
+  // KML LineString（時刻なし）
+  for(const e of q('coordinates')){
+    e.textContent.trim().split(/\s+/).forEach(t=>{const c=t.split(',').map(parseFloat);if(c.length>=2) out.push({lat:c[1],lon:c[0],t:NaN});});
+  }
+  return out;
+}
+function _parseJSON(text){
+  const j=JSON.parse(text);let out=[];
+  const fromCoords=(cs,times)=>cs.forEach((c,i)=>out.push({lat:c[1],lon:c[0],t:_tms(times?times[i]:(c.length>3?c[3]:null))}));
+  const geo=g=>{
+    if(!g) return;
+    if(g.type==='FeatureCollection') return g.features.forEach(geo);
+    if(g.type==='Feature'){
+      const t=g.properties&&(g.properties.coordTimes||g.properties.times||g.properties.timestamps);
+      const gm=g.geometry;if(!gm) return;
+      if(gm.type==='LineString') fromCoords(gm.coordinates,t);
+      else if(gm.type==='MultiLineString') gm.coordinates.forEach((l,i)=>fromCoords(l,t&&t[i]));
+      return;
+    }
+    if(g.type==='LineString') fromCoords(g.coordinates);
+    if(g.type==='MultiLineString') g.coordinates.forEach(l=>fromCoords(l));
+  };
+  if(Array.isArray(j)){
+    j.forEach(o=>{
+      const lat=o.lat??o.latitude,lon=o.lon??o.lng??o.longitude;
+      const t=o.time??o.timestamp??o.t??o.date;
+      if(lat!=null&&lon!=null) out.push({lat:+lat,lon:+lon,t:_tms(t)});
+    });
+  } else geo(j);
+  return out;
+}
+function _parseNMEA(text){
+  const out=[];
+  for(const ln of text.split(/\r?\n/)){
+    const f=ln.trim().split(',');
+    if(/^\$..RMC$/.test(f[0])&&f[2]==='A'){
+      const hh=f[1],dd=f[9];if(!hh||!dd) continue;
+      const t=Date.UTC(2000+ +dd.slice(4,6),+dd.slice(2,4)-1,+dd.slice(0,2),+hh.slice(0,2),+hh.slice(2,4),parseFloat(hh.slice(4)));
+      out.push({lat:_nmeaDeg(f[3],f[4]),lon:_nmeaDeg(f[5],f[6]),t});
+    }
+  }
+  return out;
+}
+function _parseCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2) return [];
+  const sep=lines[0].includes('\t')?'\t':(lines[0].includes(';')&&!lines[0].includes(',')?';':',');
+  const h=lines[0].split(sep).map(x=>x.trim().toLowerCase().replace(/^"|"$/g,''));
+  const idx=names=>h.findIndex(x=>names.includes(x));
+  const iLat=idx(['lat','latitude','緯度']),iLon=idx(['lon','lng','long','longitude','経度']);
+  const iT=idx(['time','timestamp','datetime','date','t','時刻','日時','utc','time_utc']);
+  if(iLat<0||iLon<0) return [];
+  return lines.slice(1).map(l=>{const c=l.split(sep).map(x=>x.trim().replace(/^"|"$/g,''));return {lat:parseFloat(c[iLat]),lon:parseFloat(c[iLon]),t:iT>=0?_tms(c[iT]):NaN};});
+}
+function parseGPX(text){
+  text=text.replace(/^﻿/,'');
+  const head=text.trimStart();
+  let list;
+  if(head[0]==='<') list=_parseXML(text);
+  else if(head[0]==='{'||head[0]==='[') list=_parseJSON(text);
+  else if(/^\$[A-Z]{2}[A-Z]{3},/m.test(head)) list=_parseNMEA(text);
+  else list=_parseCSV(text);
+  list=list.filter(p=>isFinite(p.lat)&&isFinite(p.lon)&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180);
   hasTime=list.length>1&&list.every(p=>isFinite(p.t));
   if(hasTime){
     const out=[];
@@ -764,7 +846,7 @@ let rawPts=[];
 function afterLoad(name){
   $('fname').textContent=name+'（別のファイルに変える場合はここをタップ）';
   stop();
-  if(rawPts.length<2){status('GPXに有効な点がありません');return;}
+  if(rawPts.length<2){status('有効な位置データがありません（対応: GPX / TCX / KML / GeoJSON / NMEA / CSV）');return;}
   loadPoints(rawPts);curF=0;prepare();
   let info=rawPts.length+'点';
   if(hasTime){info+='  '+fmtDate.format(new Date(rawPts[0].t))+' '+fmtTime.format(new Date(rawPts[0].t))+' 〜 '+fmtTime.format(new Date(rawPts[rawPts.length-1].t));}
