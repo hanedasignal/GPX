@@ -1,7 +1,7 @@
 {
   "name": "GPX 地図動画メーカー",
   "short_name": "GPX動画",
-  "description": "GPXから地図上を進む動画を端末内で作成します",
+  "description": "GPX などの軌跡ファイルから、地図が動く動画をこの端末の中で作ります",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

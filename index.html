@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GPX 地図動画メーカー</title>
+<title>GPX 地図動画メーカー｜GPS ログから地図の動画を作る</title>
+<meta name="description" content="GPX・TCX・KML・GeoJSON・NMEA・CSV の軌跡ファイルから、地図がスクロールする動画を作ります。処理はブラウザの中で行います。">
+<meta property="og:title" content="GPX 地図動画メーカー">
+<meta property="og:description" content="GPX・TCX・KML・GeoJSON・NMEA・CSV の軌跡ファイルから、地図がスクロールする動画を作ります。処理はブラウザの中で行います。">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1565c0">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -71,16 +74,16 @@
     <ul id="aboutBody">
       <li><b>軌跡ファイルは外に送信されません。</b>読み込み・加工・動画の作成は、すべてこの端末のブラウザの中で行います。</li>
       <li>サーバーへのアップロードも、ログインも、会員登録も、広告もありません。</li>
-      <li>作った動画は、この端末にだけ保存されます。</li>
-      <li>通信するのは、<b>地図の画像</b>（国土地理院／OpenStreetMap）と<b>フォント</b>の読み込み、<b>アクセス回数</b>（ページを開いたことだけ。Cookieなし）だけです。軌跡ファイルの中身や位置情報は送りません。</li>
-      <li>ページを閉じると、読み込んだデータはすべて消えます。</li>
+      <li>作った動画は、保存ボタンを押したときだけこの端末に保存されます。</li>
+      <li>通信するのは、<b>地図の画像</b>（国土地理院／OpenStreetMap）、<b>フォント</b>（Google Fonts）、<b>アクセス数の計測</b>（GoatCounter。開いたページ・ブラウザの種類・国などを集計。Cookieなし）だけです。地図の画像は通ったあたりの分を取り寄せるので、地図の配信元にはおおよその場所が伝わります。軌跡ファイルそのものは送りません。</li>
+      <li>ページを閉じると、読み込んだ軌跡と、保存していない動画は消えます。</li>
     </ul>
   </div>
 </div>
 
 <div class="card side">
   <label class="drop" id="drop" for="file">
-    <span class="big">📂 タップして軌跡ファイルを選ぶ</span>
+    <span class="big">📂 軌跡ファイルを選ぶ</span>
     <span class="small" id="fname">GPX・TCX・KML・GeoJSON・NMEA・CSV に対応（複数ファイルは結合）</span>
   </label>
   <input type="file" id="file" accept="*/*" multiple>
@@ -155,7 +158,7 @@
   <input type="range" id="scrub" min="0" max="899" value="0" disabled>
   <div class="row" style="margin-top:8px">
     <button id="play" disabled>▶ 再生</button>
-    <button id="rec" class="sub" disabled>● 動画を保存</button>
+    <button id="rec" class="sub" disabled>● 動画を作る</button>
   </div>
   <div id="status">軌跡ファイルを選んでください</div>
   <div id="stopsBox" style="display:none"><div id="stopsSum" style="font-weight:bold;margin-top:8px;font-size:13px"></div><div id="stopsList"></div></div>
@@ -163,7 +166,7 @@
   <div id="result"></div>
 </div>
 
-<footer class="foot">作成：<a href="https://hanedasignal.netlify.app/" target="_blank" rel="noopener">HANEDA SIGNAL</a>　<a href="https://x.com/HANEDASIGNAL" target="_blank" rel="noopener">X</a></footer>
+<footer class="foot">作成：<a href="https://hanedasignal.netlify.app/" target="_blank" rel="noopener">HANEDA SIGNAL</a>　<a href="https://x.com/HANEDASIGNAL" target="_blank" rel="noopener">X（@HANEDASIGNAL）</a></footer>
 
 <script>
 (function(){
@@ -524,7 +527,7 @@ function renderStops(){
   const thrS=brkMin()*60;
   let bc=0,bt=0;
   for(const r of stopRuns){const d=(r.e-r.s)/1000;if(d>=thrS){bc++;bt+=d;}}
-  $('stopsSum').textContent='停止 '+stopRuns.length+'件・合計 '+fmtDurS(stopTotal)+' ／ 休憩（'+brkMin()+'分以上）'+bc+'回・合計 '+fmtDurS(bt);
+  $('stopsSum').textContent='停止 '+stopRuns.length+'回・合計 '+fmtDurS(stopTotal)+' ／ 休憩（'+brkMin()+'分以上）'+bc+'回・合計 '+fmtDurS(bt);
   $('stopsList').textContent=stopRuns.map(r=>fmtTime.format(new Date(r.s))+' 〜 '+fmtTime.format(new Date(r.e))+'  '+fmtDurS((r.e-r.s)/1000)+((r.e-r.s)/1000>=thrS?'  ★休憩':'')).join('\n')||'なし';
 }
 
@@ -800,7 +803,7 @@ function drawBody(f,rest){
 function play(onEnd){
   if(playing) return;
   if(curF>=TOT-1) curF=0;
-  playing=true;$('play').textContent='■ 停止';
+  playing=true;$('play').textContent='‖ 一時停止';
   const start=performance.now()-curF/FPS*1000;
   const loop=now=>{
     if(!playing) return;
@@ -822,7 +825,7 @@ function stop(){
 /* ---------- 録画 ---------- */
 async function record(){
   if(typeof MediaRecorder==='undefined'||!canvas.captureStream){
-    status('このブラウザは動画保存に対応していません（Chromeで開いてください）');return;
+    status('このブラウザでは動画を作れません（Chromeで開いてください）');return;
   }
   stop();busy=true;setBusy(true);
   await ensureFont();
@@ -840,13 +843,13 @@ async function record(){
     const url=URL.createObjectURL(blob);
     $('result').innerHTML='';
     const v=document.createElement('video');v.src=url;v.controls=true;v.playsInline=true;v.muted=true;
-    const a=document.createElement('a');a.href=url;a.download='gpx-map.'+ext;a.className='dl';a.textContent='動画をダウンロード (.'+ext+')';
+    const a=document.createElement('a');a.href=url;a.download='gpx-map.'+ext;a.className='dl';a.textContent='動画を保存（.'+ext+'）';
     $('result').append(a,v);
-    status('保存できました（'+(blob.size/1048576).toFixed(1)+' MB）');
+    status('動画ができました（'+(blob.size/1048576).toFixed(1)+' MB）。下のボタンで保存してください。');
     busy=false;setBusy(false);
   };
   curF=0;draw(0);
-  status('録画中… '+Math.round(TOT/FPS)+'秒');
+  status('動画を作成中…（約'+Math.round(TOT/FPS)+'秒。終わるまで画面を切り替えないでください）');
   rec.start();
   setTimeout(()=>play(()=>setTimeout(()=>rec.stop(),400)),300);
 }
@@ -868,8 +871,8 @@ const fromJst=v=>Date.parse(v+':00+09:00');
 let allPts=[];
 function showInfo(){
   let info=rawPts.length+'点';
-  if(hasTime&&rawPts.length){info+='  '+fmtDate.format(new Date(rawPts[0].t))+' '+fmtTime.format(new Date(rawPts[0].t))+' 〜 '+fmtTime.format(new Date(rawPts[rawPts.length-1].t));}
-  else if(!hasTime) info+='（時刻データなし）';
+  if(hasTime&&rawPts.length){const t0=new Date(rawPts[0].t),t1=new Date(rawPts[rawPts.length-1].t);info+='  '+fmtDate.format(t0)+' '+fmtTime.format(t0)+' 〜 '+(fmtDay.format(t0)===fmtDay.format(t1)?'':'翌 ')+fmtTime.format(t1);}
+  else if(!hasTime) info+='（時刻の記録がないため、停止・休憩の表示と時刻の範囲指定は使えません）';
   status(info);
 }
 function render(){
@@ -880,13 +883,13 @@ function render(){
   $('result').innerHTML='';
 }
 function afterLoad(name){
-  $('fname').textContent=name+'（別のファイルに変える場合はここをタップ）';
+  $('fname').textContent=name+'（ここを押すと別のファイルに変えられます）';
   allPts=rawPts;
   const on=hasTime&&allPts.length>1;
   ['tFrom','tTo','tReset'].forEach(id=>$(id).disabled=!on);
   $('tFrom').value=on?jstStr(allPts[0].t):'';
   $('tTo').value=on?jstStr(allPts[allPts.length-1].t):'';
-  if(allPts.length<2){stop();status('有効な位置データがありません（対応: GPX / TCX / KML / GeoJSON / NMEA / CSV）');return;}
+  if(allPts.length<2){stop();status('位置の記録が見つかりません。対応形式は GPX・TCX・KML・GeoJSON・NMEA・CSV です（CSV は1行目に lat・lon か 緯度・経度 の列名が必要です）');return;}
   render();
 }
 function applyRange(){
