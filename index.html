@@ -97,8 +97,8 @@
     <label>向き
       <select id="orient"><option value="sq" selected>正方形 1:1 (720×720)</option><option value="port">縦 9:16 (720×1280)</option><option value="land">横 16:9 (1280×720)</option></select>
     </label>
-    <label>長さ(秒)
-      <input type="number" id="dur" value="30" min="5" max="120">
+    <label>長さ(秒・全体)
+      <input type="number" id="dur" value="40" min="12" max="180">
     </label>
   </div>
   <div class="row">
@@ -151,6 +151,8 @@
 const FPS=30;
 const $=id=>document.getElementById(id);
 const canvas=$('cv');let ctx=canvas.getContext('2d');
+const extraSec=()=>($('opening').checked?4:0)+($('fade').checked?3:0);
+const durMin=()=>{const m=5+extraSec();const d=$('dur');d.min=m;if((+d.value||0)<m)d.value=m;return m;};
 let oc=null,octx=null,OP=0,EP=0,TOT=0,Zo=10,es=1,st=1,opCx=0,opCy=0;
 const MAPS={
   pale:{url:(z,x,y)=>'https://cyberjapandata.gsi.go.jp/xyz/pale/'+z+'/'+x+'/'+y+'.png',attr:'出典：国土地理院'},
@@ -344,7 +346,7 @@ function prepare(){
   si.forEach((k,j)=>{sx[j]=wx[k];sy[j]=wy[k];sc[j]=cw[k];});
 
   // フレームごとのマーカー位置とカメラ位置(デッドゾーン方式)
-  N=Math.max(2,Math.round((+$('dur').value||30)*FPS));
+  N=Math.max(2,Math.round((durMin()?(+$('dur').value||40)-extraSec():0)*FPS));
   camX=new Float64Array(N);camY=new Float64Array(N);
   mkX=new Float64Array(N);mkY=new Float64Array(N);mkT=new Float64Array(N);mkW=new Float64Array(N);mkS=new Float64Array(N);mkR=new Float64Array(N);mkB=new Float64Array(N);mkBc=new Int32Array(N);mkBin=new Uint8Array(N);mkBr=new Float64Array(N);
   const dz=+$('dz').value,dzx=dz*W,dzy=dz*H,limx=0.45*W,limy=0.45*H;
@@ -798,6 +800,7 @@ $('sample').addEventListener('click',async()=>{
     rawPts=parseGPX(await r.text());afterLoad('サンプル');
   }catch(e){ rawPts=makeSample();hasTime=true;afterLoad('サンプル（架空）'); }
 });
+['opening','fade'].forEach(id=>$(id).addEventListener('change',durMin));
 ['map','zoom','dz','orient','dur','compress','opening','fade','brk','histN'].forEach(id=>$(id).addEventListener('change',()=>{
   if(busy||!rawPts.length) return;
   stop();prepare();
