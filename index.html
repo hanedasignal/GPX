@@ -851,7 +851,7 @@ async function record(){
     const canSh=ext==='mp4'&&!!(navigator.canShare&&navigator.canShare({files:[file]})); // X は webm を受け付けないため mp4 の時だけ
     if(canSh){
       const sh=document.createElement('button');sh.textContent='📤 共有（X などへ）';sh.style.cssText='width:100%;margin-top:8px';
-      sh.addEventListener('click',()=>{navigator.share({files:[file]}).catch(e=>{if(e&&e.name!=='AbortError') status('共有できませんでした。保存してから投稿してください');});});
+      sh.addEventListener('click',()=>{navigator.share({files:[file],text:'https://hanedasignal.github.io/GPX/'}).catch(e=>{if(e&&e.name!=='AbortError') status('共有できませんでした。保存してから投稿してください');});});
       $('result').prepend(sh);
     }
     status('動画ができました（'+(blob.size/1048576).toFixed(1)+' MB）。下のボタンで'+(canSh?'共有か保存を':'保存を')+'してください。');
