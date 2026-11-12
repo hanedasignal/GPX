@@ -68,9 +68,9 @@
 <div class="card">
   <label class="drop" id="drop" for="file">
     <span class="big">📂 タップして軌跡ファイルを選ぶ</span>
-    <span class="small" id="fname">GPX・TCX・KML・GeoJSON・NMEA・CSV に対応</span>
+    <span class="small" id="fname">GPX・TCX・KML・GeoJSON・NMEA・CSV に対応（複数ファイルは結合）</span>
   </label>
-  <input type="file" id="file" accept="*/*">
+  <input type="file" id="file" accept="*/*" multiple>
   <button type="button" id="sample" style="width:100%;margin:8px 0 0;background:#fff;color:#1565c0;border:1px solid #1565c0">サンプルで試す</button>
   <div class="row">
     <label>地図
@@ -100,6 +100,11 @@
     <label>本編の長さ(秒) <span id="durTot" style="color:#888"></span>
       <input type="number" id="dur" value="30" min="5" max="180">
     </label>
+  </div>
+  <div class="row">
+    <label>開始時刻（日本時間）<input type="datetime-local" id="tFrom" disabled></label>
+    <label>終了時刻（日本時間）<input type="datetime-local" id="tTo" disabled></label>
+    <button type="button" class="sub" id="tReset" style="flex:0 0 auto;min-width:80px;padding:8px 12px;font-size:14px" disabled>全範囲</button>
   </div>
   <div class="row">
     <label>フォント
@@ -843,21 +848,57 @@ function loadPoints(raw){
   pts=list;
 }
 let rawPts=[];
-function afterLoad(name){
-  $('fname').textContent=name+'（別のファイルに変える場合はここをタップ）';
-  stop();
-  if(rawPts.length<2){status('有効な位置データがありません（対応: GPX / TCX / KML / GeoJSON / NMEA / CSV）');return;}
-  loadPoints(rawPts);curF=0;prepare();
+const jstStr=ms=>new Date(ms+9*3600e3).toISOString().slice(0,16);
+const fromJst=v=>Date.parse(v+':00+09:00');
+let allPts=[];
+function showInfo(){
   let info=rawPts.length+'点';
-  if(hasTime){info+='  '+fmtDate.format(new Date(rawPts[0].t))+' '+fmtTime.format(new Date(rawPts[0].t))+' 〜 '+fmtTime.format(new Date(rawPts[rawPts.length-1].t));}
-  else info+='（時刻データなし）';
+  if(hasTime&&rawPts.length){info+='  '+fmtDate.format(new Date(rawPts[0].t))+' '+fmtTime.format(new Date(rawPts[0].t))+' 〜 '+fmtTime.format(new Date(rawPts[rawPts.length-1].t));}
+  else if(!hasTime) info+='（時刻データなし）';
   status(info);
+}
+function render(){
+  stop();
+  if(rawPts.length<2){status('この範囲に位置データが足りません');return;}
+  loadPoints(rawPts);curF=0;prepare();
+  showInfo();
   $('result').innerHTML='';
 }
+function afterLoad(name){
+  $('fname').textContent=name+'（別のファイルに変える場合はここをタップ）';
+  allPts=rawPts;
+  const on=hasTime&&allPts.length>1;
+  ['tFrom','tTo','tReset'].forEach(id=>$(id).disabled=!on);
+  $('tFrom').value=on?jstStr(allPts[0].t):'';
+  $('tTo').value=on?jstStr(allPts[allPts.length-1].t):'';
+  if(allPts.length<2){stop();status('有効な位置データがありません（対応: GPX / TCX / KML / GeoJSON / NMEA / CSV）');return;}
+  render();
+}
+function applyRange(){
+  if(busy||!allPts.length) return;
+  if(hasTime&&$('tFrom').value&&$('tTo').value){
+    const f=fromJst($('tFrom').value),t=fromJst($('tTo').value)+59999;
+    rawPts=allPts.filter(p=>p.t>=f&&p.t<=t);
+  } else rawPts=allPts;
+  render();
+}
+['tFrom','tTo'].forEach(id=>$(id).addEventListener('change',applyRange));
+$('tReset').addEventListener('click',()=>{
+  if(!allPts.length) return;
+  $('tFrom').value=jstStr(allPts[0].t);$('tTo').value=jstStr(allPts[allPts.length-1].t);applyRange();
+});
 $('file').addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f) return;
-  try{ rawPts=parseGPX(await f.text()); afterLoad(f.name); }
-  catch(err){status('読み込みに失敗しました: '+err.message);}
+  const fs=[...e.target.files];if(!fs.length) return;
+  try{
+    let all=[],ht=true;
+    for(const f of fs){ const l=parseGPX(await f.text()); ht=ht&&hasTime; all=all.concat(l); }
+    if(fs.length>1&&ht){
+      all.sort((a,b)=>a.t-b.t);
+      all=all.filter((p,i)=>!i||p.t>all[i-1].t);
+    } else if(fs.length>1){ all.forEach((p,i)=>p.t=i*1000); }
+    hasTime=ht;rawPts=all;
+    afterLoad(fs.length>1?fs.length+'ファイルを結合':fs[0].name);
+  }catch(err){status('読み込みに失敗しました: '+err.message);}
 });
 /* 架空サンプル（実在の走行データではありません） */
 function makeSample(){
