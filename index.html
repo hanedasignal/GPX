@@ -843,9 +843,18 @@ async function record(){
     const url=URL.createObjectURL(blob);
     $('result').innerHTML='';
     const v=document.createElement('video');v.src=url;v.controls=true;v.playsInline=true;v.muted=true;
-    const a=document.createElement('a');a.href=url;a.download='gpx-map.'+ext;a.className='dl';a.textContent='動画を保存（.'+ext+'）';
+    const fname='gpx-map.'+ext;
+    const a=document.createElement('a');a.href=url;a.download=fname;a.className='dl';a.textContent='動画を保存（.'+ext+'）';
     $('result').append(a,v);
-    status('動画ができました（'+(blob.size/1048576).toFixed(1)+' MB）。下のボタンで保存してください。');
+    // 共有: 端末の共有メニューを開き、利用者が選んだアプリ（X など）へ動画を渡す。外部サーバーへは送らない
+    const file=new File([blob],fname,{type});
+    const canSh=ext==='mp4'&&!!(navigator.canShare&&navigator.canShare({files:[file]})); // X は webm を受け付けないため mp4 の時だけ
+    if(canSh){
+      const sh=document.createElement('button');sh.textContent='📤 共有（X などへ）';sh.style.cssText='width:100%;margin-top:8px';
+      sh.addEventListener('click',()=>{navigator.share({files:[file]}).catch(e=>{if(e&&e.name!=='AbortError') status('共有できませんでした。保存してから投稿してください');});});
+      $('result').prepend(sh);
+    }
+    status('動画ができました（'+(blob.size/1048576).toFixed(1)+' MB）。下のボタンで'+(canSh?'共有か保存を':'保存を')+'してください。');
     busy=false;setBusy(false);
   };
   curF=0;draw(0);
