@@ -51,12 +51,23 @@
   .about b{color:#2e7d32}
   .about ul{margin:6px 0 0;padding-left:18px}
   #stopsList{font-size:12px;max-height:200px;overflow:auto;white-space:pre;background:#f6f6f6;border-radius:8px;padding:8px;margin-top:4px}
+  /* PC など横長の広い画面: 左に操作・説明・設定、右に地図だけ */
+  @media (min-width:900px) and (orientation:landscape){
+    body{max-width:1400px;display:grid;grid-template-columns:minmax(360px,440px) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;column-gap:16px;align-items:start}
+    h1,.foot{grid-column:1/-1}
+    .side{grid-column:1}
+    .main{display:contents}
+    .ctrl{grid-column:1;grid-row:2;background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+    .ctrl input[type=range]{margin-top:0}
+    .main canvas{grid-column:2;grid-row:2/5;position:sticky;top:12px;width:auto;height:auto;max-width:100%;max-height:calc(100vh - 24px)}
+    .main video{max-height:calc(100vh - 200px)}
+  }
 </style>
 </head>
 <body>
 <h1>GPX 地図動画メーカー</h1>
 
-<div class="card">
+<div class="card side">
   <div class="about">
     <div id="aboutHead" role="button" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:4px 0"><b>✔ 安心してお使いください</b><span id="aboutArrow" style="color:#777;font-size:12px">▲ 閉じる</span></div>
     <ul id="aboutBody">
@@ -69,7 +80,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card side">
   <label class="drop" id="drop" for="file">
     <span class="big">📂 タップして軌跡ファイルを選ぶ</span>
     <span class="small" id="fname">GPX・TCX・KML・GeoJSON・NMEA・CSV に対応（複数ファイルは結合）</span>
@@ -141,8 +152,9 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card main">
   <canvas id="cv" width="720" height="720"></canvas>
+  <div class="ctrl">
   <input type="range" id="scrub" min="0" max="899" value="0" disabled>
   <div class="row" style="margin-top:8px">
     <button id="play" disabled>▶ 再生</button>
@@ -152,6 +164,7 @@
   <div id="stopsBox" style="display:none"><div id="stopsSum" style="font-weight:bold;margin-top:8px;font-size:13px"></div><div id="stopsList"></div></div>
   <div class="note">枠の中で動いている間はカメラが動きません。枠から出たときだけスクロールします。</div>
   <div id="result"></div>
+  </div>
 </div>
 
 <footer class="foot">作成：<a href="https://hanedasignal.netlify.app/" target="_blank" rel="noopener">HANEDA SIGNAL</a>　<a href="https://x.com/HANEDASIGNAL" target="_blank" rel="noopener">X</a></footer>
