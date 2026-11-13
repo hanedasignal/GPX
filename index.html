@@ -59,9 +59,9 @@
   /* PC など横長の広い画面: 左に説明と設定、右にプレビュー */
   @media (min-width:900px) and (orientation:landscape){
     body{max-width:1400px;display:grid;grid-template-columns:minmax(360px,440px) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:16px;align-items:start}
-    h1,.foot{grid-column:1/-1}
-    .side{grid-column:1}
-    .main{grid-column:2;grid-row:2/span 2;position:sticky;top:12px;min-width:0}
+    .foot{grid-column:1/-1}
+    h1,.side{grid-column:1}
+    .main{grid-column:2;grid-row:1/span 3;position:sticky;top:12px;min-width:0}
     .main canvas{width:auto;height:auto;max-width:100%;max-height:calc(100vh - 230px);margin:0 auto}
     .main video{max-height:calc(100vh - 230px)}
   }
