@@ -910,7 +910,8 @@ function afterLoad(name){
   $('tFrom').value=on?jstStr(allPts[0].t):'';
   $('tTo').value=on?jstStr(allPts[allPts.length-1].t):'';
   if(allPts.length<2){stop();status('位置の記録が見つかりません。対応形式は GPX・TCX・KML・GeoJSON・NMEA・CSV です（CSV は1行目に lat・lon か 緯度・経度 の列名が必要です）');return;}
-  $('drop').classList.add('loaded'); // 読み込めたら選択枠を小さく
+  $('drop').classList.add('loaded'); // 読み込めたら選択枠を小さくし、サンプルボタンは消す
+  $('sample').style.display='none';
   render();
 }
 function applyRange(){
