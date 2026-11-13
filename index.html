@@ -61,7 +61,7 @@
     body{max-width:1400px;display:grid;grid-template-columns:minmax(360px,440px) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:16px;align-items:start}
     .foot{grid-column:1/-1}
     h1,.side{grid-column:1}
-    .main{grid-column:2;grid-row:1/span 3;position:sticky;top:12px;min-width:0}
+    .main{grid-column:2;grid-row:1/span 3;position:relative;min-width:0}
     .main canvas{width:auto;height:auto;max-width:100%;max-height:calc(100vh - 230px);margin:0 auto}
     .main video{max-height:calc(100vh - 230px)}
   }
@@ -184,7 +184,7 @@
 const FPS=30;
 const $=id=>document.getElementById(id);
 const canvas=$('cv');let ctx=canvas.getContext('2d');
-const extraSec=()=>($('opening').checked?4:0)+($('fade').checked?3:0);
+const extraSec=()=>($('opening').checked?3:0)+($('fade').checked?1:0);
 const durTot=()=>{$('durTot').textContent='（全体 '+((+$('dur').value||30)+extraSec())+'秒）';};
 const durMin=()=>{const d=$('dur');if((+d.value||0)<5)d.value=5;durTot();};
 let oc=null,octx=null,OP=0,EP=0,TOT=0,Zo=10,es=1,st=1,opCx=0,opCy=0;
@@ -512,8 +512,8 @@ function prepare(){
     r.sf=l3;
   }
   // オープニング用の全体表示
-  OP=$('opening').checked?4*FPS:0;
-  EP=$('fade').checked?3*FPS:0;
+  OP=$('opening').checked?3*FPS:0;
+  EP=$('fade').checked?1*FPS:0;
   TOT=OP+N+EP;
   let mnx=Infinity,mxx=-Infinity,mny=Infinity,mxy=-Infinity;
   for(let i=0;i<n;i++){if(wx[i]<mnx)mnx=wx[i];if(wx[i]>mxx)mxx=wx[i];if(wy[i]<mny)mny=wy[i];if(wy[i]>mxy)mxy=wy[i];}
