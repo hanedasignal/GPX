@@ -730,6 +730,12 @@ function drawOpening(fo){
   const e=sc.length-1;
   ctx.beginPath();ctx.arc(sx[0],sy[0],10*k/so,0,Math.PI*2);ctx.fillStyle='#2e7d32';ctx.fill();ctx.lineWidth=3*k/so;ctx.strokeStyle='#fff';ctx.stroke();
   ctx.beginPath();ctx.arc(sx[e],sy[e],10*k/so,0,Math.PI*2);ctx.fillStyle='#c62828';ctx.fill();ctx.stroke();
+  if(ez>0){   // ズーム中は、開始点を本編の現在地マーカー（白い縁＋赤）へなじませる
+    ctx.globalAlpha=ez;
+    ctx.beginPath();ctx.arc(sx[0],sy[0],15*k/so,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+    ctx.beginPath();ctx.arc(sx[0],sy[0],10*k/so,0,Math.PI*2);ctx.fillStyle='#e53935';ctx.fill();
+    ctx.globalAlpha=1;
+  }
   ctx.restore();
   // タイトル（本編の文字枠と同じ位置＝下）
   const ease=1;   // 最初のフレームから日付・稼働時間を表示（フェードインなし）
