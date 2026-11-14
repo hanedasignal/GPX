@@ -115,8 +115,8 @@
   <div class="row">
     <label>カメラ固定枠
       <select id="dz">
-        <option value="0.12">小</option>
-        <option value="0.25" selected>中</option>
+        <option value="0.12" selected>小</option>
+        <option value="0.25">中</option>
         <option value="0.38">大</option>
       </select>
     </label>
@@ -124,7 +124,7 @@
       <select id="orient"><option value="sq" selected>正方形 1:1 (720×720)</option><option value="port">縦 9:16 (720×1280)</option><option value="land">横 16:9 (1280×720)</option></select>
     </label>
     <label>本編の長さ(秒) <span id="durTot" style="color:#888"></span>
-      <input type="number" id="dur" value="30" min="5" max="180">
+      <input type="number" id="dur" value="20" min="5" max="180">
     </label>
   </div>
   <div class="row">
@@ -188,8 +188,8 @@
 const FPS=30;
 const $=id=>document.getElementById(id);
 const canvas=$('cv');let ctx=canvas.getContext('2d');
-const extraSec=()=>($('opening').checked?4:0)+($('fade').checked?1:0);
-const durTot=()=>{$('durTot').textContent='（全体 '+((+$('dur').value||30)+extraSec())+'秒）';};
+const extraSec=()=>($('opening').checked?3:0)+($('fade').checked?1:0);
+const durTot=()=>{$('durTot').textContent='（全体 '+((+$('dur').value||20)+extraSec())+'秒）';};
 const durMin=()=>{const d=$('dur');if((+d.value||0)<5)d.value=5;durTot();};
 let oc=null,octx=null,OP=0,EP=0,TOT=0,Zo=10,es=1,st=1,opCx=0,opCy=0;
 const MAPS={
@@ -522,7 +522,7 @@ function prepare(){
   si.forEach((k,j)=>{sx[j]=wx[k];sy[j]=wy[k];sc[j]=cw[k];});
 
   // フレームごとのマーカー位置とカメラ位置(デッドゾーン方式)
-  durMin();N=Math.max(2,Math.round((+$('dur').value||30)*FPS));
+  durMin();N=Math.max(2,Math.round((+$('dur').value||20)*FPS));
   camX=new Float64Array(N);camY=new Float64Array(N);
   mkX=new Float64Array(N);mkY=new Float64Array(N);mkT=new Float64Array(N);mkW=new Float64Array(N);mkS=new Float64Array(N);mkR=new Float64Array(N);mkB=new Float64Array(N);mkBc=new Int32Array(N);mkBin=new Uint8Array(N);mkBr=new Float64Array(N);
   const dz=+$('dz').value,dzx=dz*W,dzy=dz*H,limx=0.45*W,limy=0.45*H;
@@ -572,7 +572,7 @@ function prepare(){
     r.sf=l3;
   }
   // オープニング用の全体表示
-  OP=$('opening').checked?4*FPS:0;
+  OP=$('opening').checked?3*FPS:0;
   EP=$('fade').checked?1*FPS:0;
   TOT=OP+N+EP;
   let mnx=Infinity,mxx=-Infinity,mny=Infinity,mxy=-Infinity;
