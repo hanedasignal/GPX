@@ -705,7 +705,7 @@ function drawOpening(fo){
     }
   }
   // 全軌跡を明滅
-  const so=st,ph=0.5+0.5*Math.sin(fo/FPS*2*Math.PI*1.1-Math.PI/2);
+  const so=st,ph=0.5+0.5*Math.cos(fo/FPS*2*Math.PI*1.1);   // 最初は全軌跡をくっきり表示し、そこから明滅
   const al=0.25+0.75*ph;
   ctx.save();
   ctx.translate(-Math.round(L),-Math.round(T));ctx.scale(so,so);
