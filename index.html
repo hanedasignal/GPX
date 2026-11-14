@@ -85,7 +85,7 @@
       <li><b>軌跡ファイルは外に送信されません。</b>読み込み・加工・動画の作成は、すべてこの端末のブラウザの中で行います。</li>
       <li>サーバーへのアップロードも、ログインも、会員登録もありません。</li>
       <li>作った動画は、保存ボタンを押したときだけこの端末に保存されます。</li>
-      <li>通信するのは、<b>地図の画像</b>（国土地理院／OpenStreetMap）、<b>フォント</b>（Google Fonts）、<b>アクセス数の計測</b>（GoatCounter。開いたページ・ブラウザの種類・国などを集計。Cookieなし）だけです。地図の画像は通ったあたりの分を取り寄せるので、地図の配信元にはおおよその場所が伝わります。軌跡ファイルそのものは送りません。</li>
+      <li>通信するのは、<b>地図の画像</b>（国土地理院／OpenStreetMap）、<b>フォント</b>（Google Fonts）、<b>アクセス数の計測</b>（Cookieなし）だけです。地図の画像は通ったあたりの分を取り寄せるので、地図の配信元にはおおよその場所が伝わります。軌跡ファイルそのものは送りません。</li>
       <li>ページを閉じると、読み込んだ軌跡と、保存していない動画は消えます。<a href="privacy.html">個人情報の取り扱いはこちら</a></li>
     </ul>
   </div>
@@ -177,7 +177,7 @@
   <div id="result"></div>
 </div>
 
-<footer class="foot">作成：<a href="https://hanedasignal.netlify.app/" target="_blank" rel="noopener">HANEDA SIGNAL</a>　<a href="https://x.com/HANEDASIGNAL" target="_blank" rel="noopener">X（@HANEDASIGNAL）</a>　<a href="privacy.html">プライバシー</a></footer>
+<footer class="foot">作成：<a href="https://hanedasignal.netlify.app/" target="_blank" rel="noopener">HANEDA SIGNAL</a>　<a href="https://x.com/HANEDASIGNAL" target="_blank" rel="noopener">X（@HANEDASIGNAL）</a>　<a href="privacy.html">プライバシー</a><span id="visits" style="display:none"></span></footer>
 
 <script>
 (function(){
@@ -1077,6 +1077,10 @@ $('play').addEventListener('click',async()=>{
   play(()=>status('再生終了'));
 });
 $('rec').addEventListener('click',record);
+fetch('https://hanedasignal.goatcounter.com/counter/TOTAL.json').then(r=>r.ok?r.json():null).then(j=>{
+  if(!j||!j.count) return;
+  const v=$('visits');v.textContent='　アクセス '+j.count+' 回';v.style.display='';
+}).catch(()=>{});
 if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 })();
 </script>
