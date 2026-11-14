@@ -22,7 +22,7 @@
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
   .row:last-child{margin-bottom:0}
   label{font-size:13px;color:#555;display:flex;flex-direction:column;gap:2px;flex:1;min-width:110px}
-  select,input[type=number],input[type=datetime-local]{font-size:15px;padding:7px;border:1px solid #ccc;border-radius:8px;background:#fff;width:100%}
+  select,input[type=number],input[type=datetime-local],input[type=date]{font-size:15px;padding:7px;border:1px solid #ccc;border-radius:8px;background:#fff;width:100%}
   input[type=file]{font-size:14px;width:100%}
   button{font-size:16px;padding:12px 14px;border:0;border-radius:10px;background:#1565c0;color:#fff;flex:1;min-width:120px}
   button.sub{background:#455a64}
@@ -38,7 +38,7 @@
   .foot{font-size:12px;color:#777;text-align:center;margin:14px 0 8px}
   .foot a{color:#555}
   input#file{display:none}
-  input[type=datetime-local]{min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;height:38px}
+  input[type=date],input[type=datetime-local]{min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;height:38px}
   .trg{flex:1 1 44%;min-width:0}
   button,label,select,input,canvas{touch-action:manipulation}
   html{-webkit-text-size-adjust:100%;overflow-anchor:none}
@@ -94,7 +94,7 @@
 <div class="card side">
   <label class="drop" id="drop" for="file">
     <span class="big">📂 軌跡ファイルを選ぶ</span>
-    <span class="small" id="fname">GPX・TCX・KML・GeoJSON・NMEA・CSV に対応（複数ファイルは結合）</span>
+    <span class="small" id="fname">GPX・TCX・KML・GeoJSON・NMEA・CSV・Googleタイムライン に対応（複数ファイルは結合）</span>
   </label>
   <input type="file" id="file" accept="*/*" multiple>
   <button type="button" id="sample" style="width:100%;margin:8px 0 12px;background:#fff;color:#1565c0;border:1px solid #1565c0">サンプルで試す</button>
@@ -128,6 +128,7 @@
     </label>
   </div>
   <div class="row">
+    <label style="flex:1 1 100%">日付で絞る（日本時間）<input type="date" id="tDay" disabled></label>
     <label class="trg">開始（日本時間）<input type="datetime-local" id="tFrom" disabled></label>
     <label class="trg">終了（日本時間）<input type="datetime-local" id="tTo" disabled></label>
     <button type="button" class="sub" id="tReset" style="flex:1 1 100%;padding:8px 12px;font-size:14px" disabled>全範囲</button>
@@ -255,8 +256,63 @@ function _parseXML(text){
   }
   return out;
 }
+
+/* Googleタイムライン（端末書き出しTimeline.json／Takeout Records.json／旧Semantic Location History／iOS書き出し） */
+function _ll(v){
+  if(!v) return null;
+  if(typeof v==='object'){
+    const la=v.latitudeE7??v.latE7,lo=v.longitudeE7??v.lngE7;
+    if(la!=null&&lo!=null) return {lat:la/1e7,lon:lo/1e7};
+    const a=v.latitude??v.lat,b=v.longitude??v.lng;
+    if(a!=null&&b!=null) return {lat:+a,lon:+b};
+    return _ll(v.latLng||v.LatLng||v.point);
+  }
+  const m=String(v).match(/(-?\d+(?:\.\d+)?)\s*°?\s*,\s*(-?\d+(?:\.\d+)?)/);
+  return m?{lat:+m[1],lon:+m[2]}:null;
+}
+function _parseTimeline(j){
+  const out=[];
+  const add=(v,t)=>{const p=_ll(v);const ms=_tms(t);if(p&&isFinite(ms)) out.push({lat:p.lat,lon:p.lon,t:ms});};
+  const seg=(g)=>{
+    const st=g.startTime,en=g.endTime;
+    if(g.timelinePath) g.timelinePath.forEach(p=>{
+      let t=p.time;
+      if(t==null&&p.durationMinutesOffsetFromStartTime!=null) t=_tms(st)+ +p.durationMinutesOffsetFromStartTime*60000;
+      add(p.point,t);
+    });
+    const v=g.visit&&g.visit.topCandidate&&g.visit.topCandidate.placeLocation;
+    if(v){add(v,st);add(v,en);}
+    if(g.activity){add(g.activity.start,st);add(g.activity.end,en);}
+  };
+  let hit=false;
+  if(j&&Array.isArray(j.locations)&&j.locations.length&&(j.locations[0].latitudeE7!=null||j.locations[0].timestampMs!=null)){
+    hit=true;
+    j.locations.forEach(l=>add(l,l.timestamp??l.timestampMs));
+  } else if(j&&Array.isArray(j.semanticSegments)){
+    hit=true;
+    j.semanticSegments.forEach(seg);
+    (j.rawSignals||[]).forEach(r=>{if(r.position) add(r.position.LatLng||r.position.latLng,r.position.timestamp);});
+  } else if(Array.isArray(j)&&j.length&&j[0]&&j[0].startTime&&(j[0].visit||j[0].activity||j[0].timelinePath)){
+    hit=true;
+    j.forEach(seg);
+  } else if(j&&Array.isArray(j.timelineObjects)){
+    hit=true;
+    j.timelineObjects.forEach(o=>{
+      if(o.placeVisit){const p=o.placeVisit;add(p.location,p.duration&&p.duration.startTimestamp);add(p.location,p.duration&&p.duration.endTimestamp);}
+      if(o.activitySegment){
+        const a=o.activitySegment,d=a.duration||{};
+        add(a.startLocation,d.startTimestamp);add(a.endLocation,d.endTimestamp);
+        if(a.simplifiedRawPath&&a.simplifiedRawPath.points) a.simplifiedRawPath.points.forEach(q=>add(q,q.timestamp||q.timestampMs));
+      }
+    });
+  }
+  if(!hit) return null;
+  out.sort((x,y)=>x.t-y.t);
+  return out;
+}
 function _parseJSON(text){
   const j=JSON.parse(text);let out=[];
+  const tl=_parseTimeline(j);if(tl) return tl;
   const fromCoords=(cs,times)=>cs.forEach((c,i)=>out.push({lat:c[1],lon:c[0],t:_tms(times?times[i]:(c.length>3?c[3]:null))}));
   const geo=g=>{
     if(!g) return;
@@ -906,13 +962,21 @@ function afterLoad(name){
   $('fname').textContent=name+'（ここを押すと別のファイルに変えられます）';
   allPts=rawPts;
   const on=hasTime&&allPts.length>1;
-  ['tFrom','tTo','tReset'].forEach(id=>$(id).disabled=!on);
+  ['tFrom','tTo','tReset','tDay'].forEach(id=>$(id).disabled=!on);$('tDay').value='';
   $('tFrom').value=on?jstStr(allPts[0].t):'';
   $('tTo').value=on?jstStr(allPts[allPts.length-1].t):'';
-  if(allPts.length<2){stop();status('位置の記録が見つかりません。対応形式は GPX・TCX・KML・GeoJSON・NMEA・CSV です（CSV は1行目に lat・lon か 緯度・経度 の列名が必要です）');return;}
+  if(allPts.length<2){stop();status('位置の記録が見つかりません。対応形式は GPX・TCX・KML・GeoJSON・NMEA・CSV・Googleタイムライン(JSON) です（CSV は1行目に lat・lon か 緯度・経度 の列名が必要です）');return;}
+  let note='';
+  if(on&&allPts[allPts.length-1].t-allPts[0].t>48*3600e3){
+    const d=jstStr(allPts[allPts.length-1].t).slice(0,10);
+    $('tDay').value=d;$('tFrom').value=d+'T00:00';$('tTo').value=d+'T23:59';
+    rawPts=allPts.filter(p=>p.t>=fromJst(d+'T00:00')&&p.t<=fromJst(d+'T23:59')+59999);
+    note='期間が長いので、最新の日（'+d+'）に絞りました。「日付で絞る」で変えられます。';
+  }
   $('drop').classList.add('loaded'); // 読み込めたら選択枠を小さくし、サンプルボタンは消す
   $('sample').style.display='none';
   render();
+  if(note) status(note+'　'+$('status').textContent);
 }
 function applyRange(){
   if(busy||!allPts.length) return;
@@ -920,12 +984,17 @@ function applyRange(){
     const f=fromJst($('tFrom').value),t=fromJst($('tTo').value)+59999;
     rawPts=allPts.filter(p=>p.t>=f&&p.t<=t);
   } else rawPts=allPts;
+  if(rawPts.length>30000){let l=-1e18;rawPts=rawPts.filter(p=>{if(p.t-l>=3000){l=p.t;return true;}return false;});}
   render();
 }
-['tFrom','tTo'].forEach(id=>$(id).addEventListener('change',applyRange));
+$('tDay').addEventListener('change',()=>{
+  const d=$('tDay').value;if(!d) return;
+  $('tFrom').value=d+'T00:00';$('tTo').value=d+'T23:59';applyRange();
+});
+['tFrom','tTo'].forEach(id=>$(id).addEventListener('change',()=>{$('tDay').value='';applyRange();}));
 $('tReset').addEventListener('click',()=>{
   if(!allPts.length) return;
-  $('tFrom').value=jstStr(allPts[0].t);$('tTo').value=jstStr(allPts[allPts.length-1].t);applyRange();
+  $('tDay').value='';$('tFrom').value=jstStr(allPts[0].t);$('tTo').value=jstStr(allPts[allPts.length-1].t);applyRange();
 });
 $('file').addEventListener('change',async e=>{
   const fs=[...e.target.files];if(!fs.length) return;
