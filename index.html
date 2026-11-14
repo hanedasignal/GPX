@@ -723,19 +723,19 @@ function drawOpening(fo){
   ctx.save();
   ctx.translate(-Math.round(L),-Math.round(T));ctx.scale(so,so);
   ctx.lineJoin='round';ctx.lineCap='round';
+  // 本編と同じ配色（青い全軌跡＋赤い現在地）にそろえる。ズームが進むほど本編の見た目に近づく
+  const al2=al+(1-al)*ez;
   ctx.beginPath();ctx.moveTo(sx[0],sy[0]);
   for(let i=1;i<sc.length;i++) ctx.lineTo(sx[i],sy[i]);
-  ctx.strokeStyle='rgba(255,255,255,'+(al*0.8).toFixed(3)+')';ctx.lineWidth=9*k/so;ctx.stroke();
-  ctx.strokeStyle='rgba(229,57,53,'+al.toFixed(3)+')';ctx.lineWidth=5*k/so;ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,'+(al*0.8*(1-ez)).toFixed(3)+')';ctx.lineWidth=10*k/so;ctx.stroke();
+  ctx.strokeStyle='rgba(40,80,200,'+(al2*(0.9-0.45*ez)).toFixed(3)+')';ctx.lineWidth=(6+2*(1-ez))*k/so;ctx.stroke();
   const e=sc.length-1;
-  ctx.beginPath();ctx.arc(sx[0],sy[0],10*k/so,0,Math.PI*2);ctx.fillStyle='#2e7d32';ctx.fill();ctx.lineWidth=3*k/so;ctx.strokeStyle='#fff';ctx.stroke();
-  ctx.beginPath();ctx.arc(sx[e],sy[e],10*k/so,0,Math.PI*2);ctx.fillStyle='#c62828';ctx.fill();ctx.stroke();
-  if(ez>0){   // ズーム中は、開始点を本編の現在地マーカー（白い縁＋赤）へなじませる
-    ctx.globalAlpha=ez;
-    ctx.beginPath();ctx.arc(sx[0],sy[0],15*k/so,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
-    ctx.beginPath();ctx.arc(sx[0],sy[0],10*k/so,0,Math.PI*2);ctx.fillStyle='#e53935';ctx.fill();
-    ctx.globalAlpha=1;
-  }
+  ctx.globalAlpha=1-ez;   // 終点（本編には出さない）
+  ctx.beginPath();ctx.arc(sx[e],sy[e],10*k/so,0,Math.PI*2);ctx.fillStyle='#1a237e';ctx.fill();ctx.lineWidth=3*k/so;ctx.strokeStyle='#fff';ctx.stroke();
+  ctx.globalAlpha=1;
+  // 開始点は最初から本編の現在地マーカー（白い縁＋赤）
+  ctx.beginPath();ctx.arc(sx[0],sy[0],15*k/so,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+  ctx.beginPath();ctx.arc(sx[0],sy[0],10*k/so,0,Math.PI*2);ctx.fillStyle='#e53935';ctx.fill();
   ctx.restore();
   // タイトル（本編の文字枠と同じ位置＝下）
   const ease=1;   // 最初のフレームから日付・稼働時間を表示（フェードインなし）
