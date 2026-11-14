@@ -185,7 +185,7 @@
 const FPS=30;
 const $=id=>document.getElementById(id);
 const canvas=$('cv');let ctx=canvas.getContext('2d');
-const extraSec=()=>($('opening').checked?3:0)+($('fade').checked?1:0);
+const extraSec=()=>($('opening').checked?4:0)+($('fade').checked?1:0);
 const durTot=()=>{$('durTot').textContent='（全体 '+((+$('dur').value||30)+extraSec())+'秒）';};
 const durMin=()=>{const d=$('dur');if((+d.value||0)<5)d.value=5;durTot();};
 let oc=null,octx=null,OP=0,EP=0,TOT=0,Zo=10,es=1,st=1,opCx=0,opCy=0;
@@ -568,7 +568,7 @@ function prepare(){
     r.sf=l3;
   }
   // オープニング用の全体表示
-  OP=$('opening').checked?3*FPS:0;
+  OP=$('opening').checked?4*FPS:0;
   EP=$('fade').checked?1*FPS:0;
   TOT=OP+N+EP;
   let mnx=Infinity,mxx=-Infinity,mny=Infinity,mxy=-Infinity;
@@ -691,9 +691,14 @@ function panelH(k){
   return Math.max(46*k+26*k*nLeft,hr?hr*24*k+8*k:0)+44*k;
 }
 
+const ZF=FPS;   // 最後の1秒でスタート地点へズーム
 function drawOpening(fo){
   const map=$('map').value,max=Math.pow(2,Zo),k=Math.min(W,H)/720;
-  const L=opCx-W/2,T=opCy-H/2,ts=256*es;
+  const q=Math.max(0,Math.min(1,(fo-(OP-ZF))/ZF)),ez=q*q*(3-2*q);
+  const sc0=st,s=Math.exp(Math.log(sc0)*(1-ez));
+  const cx0=opCx/st,cy0=opCy/st;
+  const cwx=cx0+(camX[0]-cx0)*ez,cwy=cy0+(camY[0]-cy0)*ez;
+  const L=cwx*s-W/2,T=cwy*s-H/2,ts=256*Math.pow(2,Z-Zo)*s;
   ctx.globalAlpha=1;
   ctx.fillStyle='#e9e9e4';ctx.fillRect(0,0,W,H);
   for(let x=Math.floor(L/ts);x<=Math.floor((L+W)/ts);x++)for(let y=Math.floor(T/ts);y<=Math.floor((T+H)/ts);y++){
@@ -704,8 +709,16 @@ function drawOpening(fo){
       ctx.drawImage(t.img,dx,dy,Math.round((x+1)*ts-L)-dx,Math.round((y+1)*ts-T)-dy);
     }
   }
+  if(ez>0){   // ズーム中は本編と同じ詳細ズームのタイルを重ねる（読み込めた分だけ）
+    const tz=256*s,Mz=Math.pow(2,Z);
+    for(let x=Math.floor(L/tz);x<=Math.floor((L+W)/tz);x++)for(let y=Math.floor(T/tz);y<=Math.floor((T+H)/tz);y++){
+      if(y<0||y>=Mz) continue;
+      const t=getTile(map,Z,((x%Mz)+Mz)%Mz,y);
+      if(t.ok){const dx=Math.round(x*tz-L),dy=Math.round(y*tz-T);ctx.drawImage(t.img,dx,dy,Math.round((x+1)*tz-L)-dx,Math.round((y+1)*tz-T)-dy);}
+    }
+  }
   // 全軌跡を明滅
-  const so=st,ph=0.5+0.5*Math.cos(fo/FPS*2*Math.PI*1.1);   // 最初は全軌跡をくっきり表示し、そこから明滅
+  const so=s,ph=0.5+0.5*Math.cos(fo/FPS*2*Math.PI*1.1);   // 最初は全軌跡をくっきり表示し、そこから明滅
   const al=0.25+0.75*ph;
   ctx.save();
   ctx.translate(-Math.round(L),-Math.round(T));ctx.scale(so,so);
