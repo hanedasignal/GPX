@@ -148,6 +148,9 @@
     <label>履歴の件数
       <select id="histN"><option value="4" selected>4件（1列）</option><option value="8">8件（2列）</option></select>
     </label>
+    <label>停止として数える最短（秒）
+      <input type="number" id="stopMin" value="120" min="30" max="3600" step="10" inputmode="numeric">
+    </label>
     <label>休憩とみなす停止（分以上）
       <input type="number" id="brk" value="10" min="1" max="600" step="1" inputmode="numeric">
     </label>
@@ -421,13 +424,13 @@ function buildTimeline(compress){
     }
     let c=0;
     for(let i=0;i<n;i++){c+=diff[i];slow[i]=c>0?1:0;}
-    // 60秒以上続く停止だけを数える
+    // 設定秒数（既定120秒）以上続く停止だけを数える。信号待ちは数えない
     const inStop=new Uint8Array(n);
     let rs=-1;
     const flush=e=>{
       if(rs>=1){
         const dur=(pts[e].t-pts[rs-1].t)/1000;
-        if(dur>=60){
+        if(dur>=stopMinSec()){
           for(let k=rs;k<=e;k++){inStop[k]=1;inStopArr[k]=1;stopDurArr[k]=dur;stopRun[k]=(pts[k].t-pts[rs-1].t)/1000;}
           stopRuns.push({s:pts[rs-1].t,e:pts[e].t});
         }
@@ -454,6 +457,7 @@ function buildTimeline(compress){
   }
 }
 
+function stopMinSec(){const v=parseFloat($('stopMin').value);return isFinite(v)&&v>=30?v:120;}
 function brkMin(){const v=parseFloat($('brk').value);return isFinite(v)&&v>0?v:10;}
 
 function computeBreak(){
@@ -1053,7 +1057,7 @@ $('sample').addEventListener('click',async()=>{
   }catch(e){ rawPts=makeSample();hasTime=true;afterLoad('サンプル（架空）'); }
 });
 ['opening','fade','dur'].forEach(id=>$(id).addEventListener('input',durTot));durTot();
-['map','zoom','dz','orient','dur','compress','opening','fade','brk','histN'].forEach(id=>$(id).addEventListener('change',()=>{
+['map','zoom','dz','orient','dur','compress','opening','fade','brk','stopMin','histN'].forEach(id=>$(id).addEventListener('change',()=>{
   if(busy||!rawPts.length) return;
   stop();prepare();
 }));
