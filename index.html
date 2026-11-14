@@ -151,6 +151,9 @@
     <label>停止として数える最短（秒）
       <input type="number" id="stopMin" value="120" min="30" max="3600" step="10" inputmode="numeric">
     </label>
+    <label>履歴の動き
+      <select id="histMode"><option value="drum" selected>ドラム（縦に回る）</option><option value="fix">固定枠（薄くなる）</option></select>
+    </label>
     <label>休憩とみなす停止（分以上）
       <input type="number" id="brk" value="10" min="1" max="600" step="1" inputmode="numeric">
     </label>
@@ -828,8 +831,9 @@ function drawBody(f,rest){
     let c=0;
     while(c<stopRuns.length&&stopRuns[c].sf<=f) c++;
     const fadeH=$('fade').checked,TR=24;
-    const NH=+$('histN').value;
-    for(let j=Math.max(0,c-NH);j<c;j++){
+    const drum=$('histMode').value==='drum';
+    const NH=drum?4:+$('histN').value;
+    for(let j=Math.max(0,c-(drum?5:NH));j<c;j++){
       const r=stopRuns[j];
       let rank=0;                                   // 自分より新しい停止の数（件数）
       for(let m=j+1;m<c;m++) rank+=Math.min(1,(f-stopRuns[m].sf)/TR);
@@ -837,9 +841,14 @@ function drawBody(f,rest){
       const TB=NH===4?[1,0.5,0.2,0,0,0,0,0,0]:[1,0.55,0.30,0.15,0.06,0,0,0,0];   // 4件: 次に書き換える枠は消えている
       const ri=Math.min(7,Math.floor(rank)),rf=rank-ri;
       let a=fadeH?TB[ri]+(TB[ri+1]-TB[ri])*Math.min(1,rf):1;
+      if(drum){   // ドラム: 一番下が芯（最新）。上へ送られるほど薄く、小さくなる
+        const DT=[1,0.72,0.5,0.32,0];
+        const ri2=Math.min(3,Math.floor(rank)),rf2=Math.min(1,rank-ri2);
+        a=fadeH?(rank>=4?0:DT[ri2]+(DT[ri2+1]-DT[ri2])*rf2):1;
+      }
       a=a+(1-a)*restore;                            // エンディングで濃く戻る
       const ended=r.ef<=f;
-      rows.push({t:r.s,d:ended?(r.e-r.s)/1000:mkR[f],a:a,live:!ended,newest:(j===c-1),slot:j%NH});
+      rows.push({t:r.s,d:ended?(r.e-r.s)/1000:mkR[f],a:a,live:!ended,newest:(j===c-1),slot:j%NH,rank:rank});
     }
   }
   const histRows=(hasTime&&$('showRun').checked)?4:0;
@@ -864,6 +873,18 @@ function drawBody(f,rest){
     ctx.font=fnt(16*k,true);
     const NHd=+$('histN').value;
     const colW=ctx.measureText('00:00  1時間00分00秒').width,gap=16*k;
+    if($('histMode').value==='drum'){
+      const baseY=py+28*k+24*k*3,xr=bx+bw;
+      ctx.save();ctx.beginPath();ctx.rect(xr-colW-12*k,py+8*k,colW+24*k,baseY+8*k-(py+8*k));ctx.clip();
+      rows.forEach(r=>{
+        const isBrk=brkOn&&r.d>=thrS,rk=Math.min(r.rank,4.6),sc2=1-0.06*Math.min(rk,4);
+        ctx.globalAlpha=r.a;
+        ctx.fillStyle=r.live?'#e53935':(isBrk?'#e65100':'#333');
+        ctx.font=fnt(16*k*sc2,r.rank<0.5||r.live||isBrk);
+        ctx.fillText(fmtTime.format(new Date(r.t))+'  '+fmtDurS(r.d),xr,baseY-24*k*rk*(1-0.045*rk));
+      });
+      ctx.restore();
+    } else
     rows.forEach((r,i)=>{
       const isBrk=brkOn&&r.d>=thrS,c=NHd===8?(r.slot<4?0:1):1,rw=r.slot%4;
       ctx.globalAlpha=r.a;
@@ -1057,7 +1078,7 @@ $('sample').addEventListener('click',async()=>{
   }catch(e){ rawPts=makeSample();hasTime=true;afterLoad('サンプル（架空）'); }
 });
 ['opening','fade','dur'].forEach(id=>$(id).addEventListener('input',durTot));durTot();
-['map','zoom','dz','orient','dur','compress','opening','fade','brk','stopMin','histN'].forEach(id=>$(id).addEventListener('change',()=>{
+['map','zoom','dz','orient','dur','compress','opening','fade','brk','stopMin','histN','histMode'].forEach(id=>$(id).addEventListener('change',()=>{
   if(busy||!rawPts.length) return;
   stop();prepare();
 }));
