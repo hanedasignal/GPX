@@ -191,10 +191,10 @@
 const FPS=30;
 const $=id=>document.getElementById(id);
 const canvas=$('cv');let ctx=canvas.getContext('2d');
-const extraSec=()=>($('opening').checked?3:0)+($('fade').checked?1:0);
+const extraSec=()=>($('opening').checked?3:0)+($('fade').checked?1:0)+0.2;
 const durTot=()=>{$('durTot').textContent='（全体 '+((+$('dur').value||20)+extraSec())+'秒）';};
 const durMin=()=>{const d=$('dur');if((+d.value||0)<5)d.value=5;durTot();};
-let oc=null,octx=null,OP=0,EP=0,TOT=0,Zo=10,es=1,st=1,opCx=0,opCy=0;
+let oc=null,octx=null,OP=0,HD=6,EP=0,TOT=0,Zo=10,es=1,st=1,opCx=0,opCy=0;
 const MAPS={
   pale:{url:(z,x,y)=>'https://cyberjapandata.gsi.go.jp/xyz/pale/'+z+'/'+x+'/'+y+'.png',attr:'出典：国土地理院'},
   std:{url:(z,x,y)=>'https://cyberjapandata.gsi.go.jp/xyz/std/'+z+'/'+x+'/'+y+'.png',attr:'出典：国土地理院'},
@@ -577,7 +577,7 @@ function prepare(){
   // オープニング用の全体表示
   OP=$('opening').checked?3*FPS:0;
   EP=$('fade').checked?1*FPS:0;
-  TOT=OP+N+EP;
+  TOT=OP+HD+N+EP;
   let mnx=Infinity,mxx=-Infinity,mny=Infinity,mxy=-Infinity;
   for(let i=0;i<n;i++){if(wx[i]<mnx)mnx=wx[i];if(wx[i]>mxx)mxx=wx[i];if(wy[i]<mny)mny=wy[i];if(wy[i]>mxy)mxy=wy[i];}
   // 全軌跡が画面いっぱいになる倍率（タイルは整数ズーム＋拡大で表示）
@@ -678,8 +678,9 @@ const fmtDay=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeri
 function draw(F){
   if(!N) return;
   F=Math.max(0,Math.min(TOT-1,F|0));
-  if(F>=OP+N){drawBody(N-1,Math.min(1,(F-OP-N+1)/Math.max(1,EP)));return;}
-  if(F>=OP){drawBody(F-OP,0);return;}
+  if(F>=OP+HD+N){drawBody(N-1,Math.min(1,(F-OP-HD-N+1)/Math.max(1,EP)));return;}
+  if(F>=OP+HD){drawBody(F-OP-HD,0);return;}
+  if(F>=OP){drawBody(0,0);return;}   // オープニングが完全に終わったあと、0.2秒止めてから動き出す
   const XF=Math.round(0.5*FPS);
   if(F>=OP-XF){
     drawBody(0,0);
