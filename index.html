@@ -523,14 +523,14 @@ function prepare(){
   durMin();N=Math.max(2,Math.round((+$('dur').value||20)*FPS));
   camX=new Float64Array(N);camY=new Float64Array(N);
   mkX=new Float64Array(N);mkY=new Float64Array(N);mkT=new Float64Array(N);mkW=new Float64Array(N);mkS=new Float64Array(N);mkR=new Float64Array(N);mkB=new Float64Array(N);mkBc=new Int32Array(N);mkBin=new Uint8Array(N);mkBr=new Float64Array(N);
-  const dz=+$('dz').value,dzx=dz*W,dzy=dz*H,limx=0.45*W,limy=0.45*H;
+  const dz=+$('dz').value,dzx=dz*W,dzy=dz*H;
   // 下の白い文字枠に現在地が入り込まないよう、下側の余白を確保する
   const kk=Math.min(W,H)/720;
   const nLeft=hasTime?($('showStop').checked?1:0)+($('showBreak').checked?1:0):0;
   const nHist=hasTime&&$('showRun').checked?4:0;
   const phMax=Math.max(46*kk+26*kk*nLeft,nHist?nHist*26*kk+8*kk:0)+44*kk;
   const limDn=Math.max(0.15*H,H/2-(phMax+22*kk)-36*kk);   // 中心から下へ行ける最大距離
-  const dzyDn=Math.min(dzy,limDn),limUp=limy;
+  const dzyDn=Math.min(dzy,limDn);
   let cx=0,cy=0,recenter=false;
   const doCenter=true,minWH=Math.min(W,H);
   for(let f=0;f<N;f++){
@@ -556,8 +556,9 @@ function prepare(){
       if(my-cy>dzyDn) ty=my-dzyDn; else if(cy-my>dzy) ty=my+dzy;
       cx+=(tx-cx)*0.25;cy+=(ty-cy)*0.25;
     }
-    if(mx-cx>limx) cx=mx-limx; else if(cx-mx>limx) cx=mx+limx;
-    if(my-cy>limDn) cy=my-limDn; else if(cy-my>limUp) cy=my+limUp;
+    // 追いつけない速さでも、現在地は枠の外へ出さない (小・中・大の差が出る)
+    if(mx-cx>dzx) cx=mx-dzx; else if(cx-mx>dzx) cx=mx+dzx;
+    if(my-cy>dzyDn) cy=my-dzyDn; else if(cy-my>dzy) cy=my+dzy;
     camX[f]=cx;camY[f]=cy;
   }
   // 停止が終わったフレーム（履歴の残像用）
