@@ -968,7 +968,8 @@ async function record(){
     const url=URL.createObjectURL(blob);
     $('result').innerHTML='';
     const v=document.createElement('video');v.src=url;v.controls=true;v.playsInline=true;v.muted=true;
-    const fname='gpx-map.'+ext;
+    const st0=(hasTime&&rawPts.length)?jstStr(rawPts[0].t).replace(/[-:]/g,'').replace('T','_'):'';   // 保存名は動画の開始日時（日本時間）
+    const fname='route'+(st0?'_'+st0:'')+'.'+ext;
     const a=document.createElement('a');a.href=url;a.download=fname;a.className='dl';a.textContent='動画を保存（.'+ext+'）';
     $('result').append(a,v);
     // 共有: 端末の共有メニューを開き、利用者が選んだアプリ（X など）へ動画を渡す。外部サーバーへは送らない
