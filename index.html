@@ -691,7 +691,7 @@ function draw(F){
 function panelH(k){
   const nLeft=hasTime?($('showStop').checked?1:0)+($('showBreak').checked?1:0):0;
   const hr=(hasTime&&$('showRun').checked)?4:0;
-  return Math.max(46*k+26*k*nLeft,hr?hr*24*k+8*k:0)+44*k;
+  return Math.max(46*k+26*k*nLeft,hr?hr*26*k+8*k:0)+44*k;
 }
 
 const ZF=FPS;   // 最後の1秒でスタート地点へズーム
@@ -848,7 +848,17 @@ function drawBody(f,rest){
     }
   }
   const histRows=(hasTime&&$('showRun').checked)?4:0;
-  const topArea=Math.max(46*k+26*k*left.length,histRows?histRows*24*k+8*k:0);
+  // 履歴の文字は大きめ(19)。2列＋左の時刻欄が横幅に収まらないときだけ縮める。行間は文字に比例
+  let HF=19*k,HP=26*k,colWm=0;
+  if(histRows){
+    ctx.font=fnt(19*k,true);
+    let leftW=260*k;left.forEach(l=>{leftW=Math.max(leftW,ctx.measureText(l.t).width);});
+    colWm=ctx.measureText('00:00  00分00秒').width;
+    stopRuns.forEach(r=>{colWm=Math.max(colWm,ctx.measureText(fmtTime.format(new Date(r.s))+'  '+fmtDurS((r.e-r.s)/1000)).width);});
+    const cn=$('histN').value==='d8'?2:1,need=cn*colWm+(cn-1)*16*k,avail=bw-leftW-20*k;
+    if(need>avail){const sc3=Math.max(14/19,avail/need);HF=19*k*sc3;colWm*=sc3;}
+  }
+  const topArea=Math.max(46*k+26*k*left.length,histRows?histRows*HP+8*k:0);
   const ph=topArea+44*k,py=H-ph-22*k,bh=8*k,by=py+ph-27*k;
   rrect(mg,py,W-2*mg,ph,16*k);
   ctx.fillStyle='rgba(255,255,255,0.9)';ctx.fill();
@@ -871,19 +881,19 @@ function drawBody(f,rest){
     const colW=ctx.measureText('00:00  1時間00分00秒').width,gap=16*k;
     if(/^d/.test($('histN').value)){
       // ドラム: 右の列の一番下が芯（最新）。上へ送られ、右列の上端から左列の下へ回り込む（8件のとき）
-      const two=$('histN').value==='d8',baseY=py+28*k+24*k*3,xr=bx+bw,xl=xr-colW-gap;
+      const two=$('histN').value==='d8',baseY=py+HP+0.25*HF+HP*3,xr=bx+bw,xl=xr-colWm-gap;
       const cols=two?[[xr,0],[xl,4]]:[[xr,0]];
       rows.forEach(r=>{
         const isBrk=brkOn&&r.d>=thrS;
         ctx.globalAlpha=r.a;
         ctx.fillStyle=r.live?'#e53935':(isBrk?'#e65100':'#333');
-        ctx.font=fnt(16*k,r.rank<0.5||r.live||isBrk);
+        ctx.font=fnt(HF,r.rank<0.5||r.live||isBrk);
         const tx=fmtTime.format(new Date(r.t))+'  '+fmtDurS(r.d);
         cols.forEach(([cx2,off])=>{
           const rk=r.rank-off;
           if(rk<-0.6||rk>4.6) return;
-          ctx.save();ctx.beginPath();ctx.rect(cx2-colW-12*k,py+8*k,colW+24*k,baseY+8*k-(py+8*k));ctx.clip();
-          ctx.fillText(tx,cx2,baseY-24*k*rk);
+          ctx.save();ctx.beginPath();ctx.rect(cx2-colWm-12*k,py+8*k,colWm+24*k,baseY+8*k-(py+8*k));ctx.clip();
+          ctx.fillText(tx,cx2,baseY-HP*rk);
           ctx.restore();
         });
       });
