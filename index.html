@@ -7,6 +7,11 @@
 <meta name="description" content="GPX・TCX・KML・GeoJSON・NMEA・CSV の軌跡ファイルから、地図がスクロールする動画を作ります。処理はブラウザの中で行います。">
 <meta property="og:title" content="GPX 地図動画メーカー">
 <meta property="og:description" content="GPX・TCX・KML・GeoJSON・NMEA・CSV の軌跡ファイルから、地図がスクロールする動画を作ります。処理はブラウザの中で行います。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hanedasignal.github.io/GPX/">
+<meta property="og:image" content="https://hanedasignal.github.io/GPX/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://hanedasignal.github.io/GPX/og.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1565c0">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -178,7 +183,7 @@
   <div id="result"></div>
 </div>
 
-<footer class="foot">作成：<a href="https://hanedasignal.netlify.app/" target="_blank" rel="noopener">HANEDA SIGNAL</a>　<a href="https://x.com/HANEDASIGNAL" target="_blank" rel="noopener">X（@HANEDASIGNAL）</a>　<a href="privacy.html">プライバシー</a><span id="visits" style="display:none"></span></footer>
+<footer class="foot">作成：<a href="https://hanedasignal.netlify.app/?ref=gpx" target="_blank" rel="noopener">HANEDA SIGNAL</a>　<a href="https://x.com/HANEDASIGNAL" target="_blank" rel="noopener">X（@HANEDASIGNAL）</a>　<a href="privacy.html">プライバシー</a><span id="visits" style="display:none"></span></footer>
 
 <script>
 (function(){
@@ -977,7 +982,7 @@ async function record(){
     const canSh=ext==='mp4'&&!!(navigator.canShare&&navigator.canShare({files:[file]})); // X は webm を受け付けないため mp4 の時だけ
     if(canSh){
       const sh=document.createElement('button');sh.textContent='📤 共有（X などへ）';sh.style.cssText='width:100%;margin-top:8px';
-      sh.addEventListener('click',()=>{navigator.share({files:[file],text:'GPX 地図動画メーカー（@HANEDASIGNAL）\nhttps://hanedasignal.github.io/GPX/'}).catch(e=>{if(e&&e.name!=='AbortError') status('共有できませんでした。保存してから投稿してください');});});
+      sh.addEventListener('click',()=>{gcEvent('share');navigator.share({files:[file],text:'GPX 地図動画メーカー（@HANEDASIGNAL）\nhttps://hanedasignal.github.io/GPX/'}).catch(e=>{if(e&&e.name!=='AbortError') status('共有できませんでした。保存してから投稿してください');});});
       $('result').prepend(sh);
     }
     status('動画ができました（'+(blob.size/1048576).toFixed(1)+' MB）。下のボタンで'+(canSh?'共有か保存を':'保存を')+'してください。');
@@ -1135,7 +1140,8 @@ $('play').addEventListener('click',async()=>{
   status('再生中');
   play(()=>status('再生終了'));
 });
-$('rec').addEventListener('click',record);
+function gcEvent(n){try{if(window.goatcounter&&window.goatcounter.count) window.goatcounter.count({path:n,title:n,event:true});}catch(e){}}
+$('rec').addEventListener('click',()=>{gcEvent('make-video');record();});
 fetch('https://hanedasignal.goatcounter.com/counter/TOTAL.json').then(r=>r.ok?r.json():null).then(j=>{
   if(!j||!j.count) return;
   const v=$('visits');v.textContent='　アクセス '+j.count+' 回';v.style.display='';
