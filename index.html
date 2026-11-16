@@ -146,13 +146,10 @@
       </select>
     </label>
     <label>履歴の件数
-      <select id="histN"><option value="4" selected>4件（1列）</option><option value="8">8件（2列）</option></select>
+      <select id="histN"><option value="d4" selected>4件 ドラム（縦に回る）</option><option value="4">4件 固定枠（1列）</option><option value="8">8件 固定枠（2列）</option></select>
     </label>
     <label>停止として数える最短（秒）
       <input type="number" id="stopMin" value="120" min="30" max="3600" step="10" inputmode="numeric">
-    </label>
-    <label>履歴の動き
-      <select id="histMode"><option value="drum" selected>ドラム（縦に回る）</option><option value="fix">固定枠（薄くなる）</option></select>
     </label>
     <label>休憩とみなす停止（分以上）
       <input type="number" id="brk" value="10" min="1" max="600" step="1" inputmode="numeric">
@@ -832,8 +829,8 @@ function drawBody(f,rest){
     let c=0;
     while(c<stopRuns.length&&stopRuns[c].sf<=f) c++;
     const fadeH=$('fade').checked,TR=24;
-    const drum=$('histMode').value==='drum';
-    const NH=drum?4:+$('histN').value;
+    const drum=$('histN').value==='d4';
+    const NH=drum?4:(+$('histN').value||4);
     for(let j=Math.max(0,c-(drum?5:NH));j<c;j++){
       const r=stopRuns[j];
       let rank=0;                                   // 自分より新しい停止の数（件数）
@@ -872,9 +869,9 @@ function drawBody(f,rest){
     });
     ctx.textAlign='right';
     ctx.font=fnt(16*k,true);
-    const NHd=+$('histN').value;
+    const NHd=+$('histN').value||4;
     const colW=ctx.measureText('00:00  1時間00分00秒').width,gap=16*k;
-    if($('histMode').value==='drum'){
+    if($('histN').value==='d4'){
       const baseY=py+28*k+24*k*3,xr=bx+bw;
       ctx.save();ctx.beginPath();ctx.rect(xr-colW-12*k,py+8*k,colW+24*k,baseY+8*k-(py+8*k));ctx.clip();
       rows.forEach(r=>{
@@ -1079,7 +1076,7 @@ $('sample').addEventListener('click',async()=>{
   }catch(e){ rawPts=makeSample();hasTime=true;afterLoad('サンプル（架空）'); }
 });
 ['opening','fade','dur'].forEach(id=>$(id).addEventListener('input',durTot));durTot();
-['map','zoom','dz','orient','dur','compress','opening','fade','brk','stopMin','histN','histMode'].forEach(id=>$(id).addEventListener('change',()=>{
+['map','zoom','dz','orient','dur','compress','opening','fade','brk','stopMin','histN'].forEach(id=>$(id).addEventListener('change',()=>{
   if(busy||!rawPts.length) return;
   stop();prepare();
 }));
