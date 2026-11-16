@@ -145,7 +145,7 @@
         <option value="dela">Dela Gothic One（極太）</option>
       </select>
     </label>
-    <input type="hidden" id="histN" value="8">
+    <input type="hidden" id="histN" value="d8">
     <label>停止として数える最短（秒）
       <input type="number" id="stopMin" value="120" min="30" max="3600" step="10" inputmode="numeric">
     </label>
@@ -827,9 +827,9 @@ function drawBody(f,rest){
     let c=0;
     while(c<stopRuns.length&&stopRuns[c].sf<=f) c++;
     const fadeH=$('fade').checked,TR=24;
-    const drum=$('histN').value==='d4';
+    const hv=$('histN').value,drum=/^d/.test(hv),d8=hv==='d8';
     const NH=drum?4:(+$('histN').value||4);
-    for(let j=Math.max(0,c-(drum?5:NH));j<c;j++){
+    for(let j=Math.max(0,c-(drum?(d8?9:5):NH));j<c;j++){
       const r=stopRuns[j];
       let rank=0;                                   // 自分より新しい停止の数（件数）
       for(let m=j+1;m<c;m++){const u=Math.min(1,(f-stopRuns[m].sf)/(drum?8:TR));rank+=drum?1-Math.pow(1-u,3):u;}   // ドラムは約0.27秒でスッと送る（出だしが速い）
@@ -838,9 +838,9 @@ function drawBody(f,rest){
       const ri=Math.min(7,Math.floor(rank)),rf=rank-ri;
       let a=fadeH?TB[ri]+(TB[ri+1]-TB[ri])*Math.min(1,rf):1;
       if(drum){   // ドラム: 一番下が芯（最新）。上へ送られるほど薄く、小さくなる
-        const DT=[1,0.72,0.5,0.32,0];
-        const ri2=Math.min(3,Math.floor(rank)),rf2=Math.min(1,rank-ri2);
-        a=fadeH?(rank>=4?0:DT[ri2]+(DT[ri2+1]-DT[ri2])*rf2):1;
+        const DT=d8?[1,0.82,0.64,0.5,0.38,0.27,0.17,0.08,0]:[1,0.72,0.5,0.32,0];
+        const mx=DT.length-1,ri2=Math.min(mx-1,Math.floor(rank)),rf2=Math.min(1,rank-ri2);
+        a=fadeH?(rank>=mx?0:DT[ri2]+(DT[ri2+1]-DT[ri2])*rf2):1;
       }
       a=a+(1-a)*restore;                            // エンディングで濃く戻る
       const ended=r.ef<=f;
@@ -869,17 +869,24 @@ function drawBody(f,rest){
     ctx.font=fnt(16*k,true);
     const NHd=+$('histN').value||4;
     const colW=ctx.measureText('00:00  1時間00分00秒').width,gap=16*k;
-    if($('histN').value==='d4'){
-      const baseY=py+28*k+24*k*3,xr=bx+bw;
-      ctx.save();ctx.beginPath();ctx.rect(xr-colW-12*k,py+8*k,colW+24*k,baseY+8*k-(py+8*k));ctx.clip();
+    if(/^d/.test($('histN').value)){
+      // ドラム: 右の列の一番下が芯（最新）。上へ送られ、右列の上端から左列の下へ回り込む（8件のとき）
+      const two=$('histN').value==='d8',baseY=py+28*k+24*k*3,xr=bx+bw,xl=xr-colW-gap;
+      const cols=two?[[xr,0],[xl,4]]:[[xr,0]];
       rows.forEach(r=>{
-        const isBrk=brkOn&&r.d>=thrS,rk=Math.min(r.rank,4.6);
+        const isBrk=brkOn&&r.d>=thrS;
         ctx.globalAlpha=r.a;
         ctx.fillStyle=r.live?'#e53935':(isBrk?'#e65100':'#333');
         ctx.font=fnt(16*k,r.rank<0.5||r.live||isBrk);
-        ctx.fillText(fmtTime.format(new Date(r.t))+'  '+fmtDurS(r.d),xr,baseY-24*k*rk);
+        const tx=fmtTime.format(new Date(r.t))+'  '+fmtDurS(r.d);
+        cols.forEach(([cx2,off])=>{
+          const rk=r.rank-off;
+          if(rk<-0.6||rk>4.6) return;
+          ctx.save();ctx.beginPath();ctx.rect(cx2-colW-12*k,py+8*k,colW+24*k,baseY+8*k-(py+8*k));ctx.clip();
+          ctx.fillText(tx,cx2,baseY-24*k*rk);
+          ctx.restore();
+        });
       });
-      ctx.restore();
     } else
     rows.forEach((r,i)=>{
       const isBrk=brkOn&&r.d>=thrS,c=NHd===8?(r.slot<4?0:1):1,rw=r.slot%4;
